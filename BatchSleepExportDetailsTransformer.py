@@ -10,6 +10,7 @@ import os
 #import requests
 import pandas as pd
 import glob
+import datetime
 
 #to create timestamps for filenames
 import time
@@ -97,7 +98,8 @@ out_file = output_dir + "\\BatchTransform_" + timestamp + ".csv"
 # in_file = "C:\\Users\\nazim\\Documents\\PSS\\BatchSleepExportDetails\\BatchSleepExportDetails(2019-03-12_10-01-53).csv"
 
 dateparse = lambda x: pd.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p')
-columns = ['Subject Name', 'In Bed Time', 'Out Bed Time', 'Efficiency', 'Latency', 'Onset', 'Total Sleep Time', 'WASO', 'Number of Awakenings', 'Length of Awakenings in Minutes']
+columns = ['Subject Name', 'In Bed Time', 'Out Bed Time', 'Efficiency', 'Latency', 'Onset', 'Total Sleep Time',
+           'WASO', 'Number of Awakenings', 'Length of Awakenings in Minutes']
 datetime_columns = ['In Bed Time', 'Out Bed Time', 'Onset']
 first_file = True
 out_df = pd.DataFrame()
@@ -110,23 +112,84 @@ for file_name in glob.iglob("*.csv", recursive=True):
     # export data
     in_df = pd.read_csv(file_name, parse_dates=datetime_columns, date_parser=dateparse)[columns].copy()
     if verbose:
-        print(in_df)
+        print(in_df.tail())
     out_df = out_df.append(in_df, ignore_index = True)
     if verbose:
         print("Cumulative dataframe:")
-        print(out_df)
+        print(out_df.tail())
 
 # remove duplicate rows
-out_df = out_df.drop_duplicates(keep='first') # subset=['Subject Name', 'In Bed Time'], 
-
-# insert null rows for missing days
+out_df = out_df.drop_duplicates(keep='first') 
 
 # transform the fields that weren't provided
 out_df['Total Time in Bed'] = out_df['Total Sleep Time']
 out_df['Total Sleep Time'] = out_df['Total Time in Bed']-out_df['Length of Awakenings in Minutes']-out_df['Latency']
 out_df['Mid-Sleep Point'] = out_df['Onset'] + (out_df['Out Bed Time']-out_df['Onset'])/2 # TODO review if this is correct!
+out_df['Date'] = out_df['In Bed Time'].dt.date
 
-#open file to put data out into
+# prep for missing dates
+if verbose:
+    print(out_df.tail())
+    out_df.info(verbose = True)
+subject = ""
+missing_rows = []
+expected_date = out_df['Date'][0]
+if verbose:
+    print("First row date: " + str(expected_date))
+expected_date += datetime.timedelta(days=1)
+if verbose:
+    print("Expected date: " + str(expected_date))
+date_diff = 0
+# FIXME
+### check for missing dates:
+##for i, row in out_df.iterrows():
+##    if verbose:
+##        print("Subject: " + subject)
+##    if row['Subject Name'] == subject:
+##        if row['Date'] == expected_date:
+##            expected_date += datetime.timedelta(days=1)
+##        else:
+##            if verbose:
+##                print("Missing date: " + str(expected_date))
+##                print("Current row's date: " + str(row['Date']))
+##            # figure out date difference in days
+##            date_diff = (row['Date'] - expected_date).days
+##            print(str(date_diff) + " days difference.")
+##            count = 0
+##            while(date_diff > count):
+##                # create row
+##                line = {'Subject Name': subject,
+##                        'In Bed Time':None, 'Out Bed Time':None, 'Efficiency':None, 'Latency':None,
+##                        'Onset':None, 'Total Sleep Time':None,'WASO':None, 'Number of Awakenings':None,
+##                        'Length of Awakenings in Minutes':None, 'Total Time in Bed':None, 'Mid-Sleep Point':None, 
+##                        'Date': expected_date}
+##                if verbose:
+##                    print(line)
+##                missing_rows.append(line)
+##                # update expected_date
+##                expected_date += datetime.timedelta(days=1)
+##                count += 1
+##            if verbose:
+##                break
+##    else:
+##        # new subject, new everything!
+##        subject = row['Subject Name']
+##        expected_date = row['Date']
+##        expected_date += datetime.timedelta(days=1)
+### merge missing dataframe
+##if verbose: 
+##    print("Missing dates:")
+##    print(missing_rows)
+##   
+### out_df = pd.concat([out_df,missing_df])
+##out_df = out_df.append(pd.Dataframe(missing_rows), ignore_index = True, sort=False) # FIXME module 'pandas' has no attribute 'Dataframe
+if verbose:
+    print("End of dataframe with missing dates:")
+    print(out_df.tail())
+# resort dataframe
+# out_df = pd.MultiIndex.from_product([out_df['Subject Name'].unique()], names=['Subject Name', 'Date']) # FIXME Length of names must match number of levels in MultiIndex
+
+# load the data
 out_df.to_csv(out_file)
 
 # cleanup of output
