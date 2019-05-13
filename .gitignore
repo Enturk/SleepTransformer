@@ -3,7 +3,16 @@
 *.xml
 *.csv
 *.docx
+*.agd
+*.json
+*.abl
+*.txt
+*.aft
+*.xlsx
+*.afw
 Batch*/**
+PSS Equipment Data/**
+Raw Data/**
 
 
 # Byte-compiled / optimized / DLL files

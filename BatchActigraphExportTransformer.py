@@ -18,9 +18,10 @@ ts = time.gmtime()
 timestamp = time.strftime("%Y-%m-%d+%H-%M-%S", ts)
 
 # main variables
-input_dir = "BatchSleepExportDetails"
+in_file = "Scoring Tab Export_DailyDetailed.csv"
+input_dir = "Scoring Tab Export\\Scoring Tab Export"
 output_dir = "BatchTransformOutput"
-
+out_file = "Actigraph"
 # testing done on a small number of known files
 # set to 0 if not testing
 numberOfFiles = 1
@@ -90,23 +91,23 @@ else:
     print(f'Fatal error - output directory {output_dir} not found')
     quit()
 
-out_file = output_dir + "\\BatchTransform_" + timestamp + ".csv"
+out_file = output_dir + "\\" + out_file + timestamp + ".csv"
 
 # Main
 # unused stuff kept in case something breaks:
 # in_file = os.listdir(input_dir)[0] # FIXME puts a 'b' in front of file name...
 # in_file = "C:\\Users\\nazim\\Documents\\PSS\\BatchSleepExportDetails\\BatchSleepExportDetails(2019-03-12_10-01-53).csv"
 
-dateparse = lambda x: pd.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p')
-columns = ['Subject Name', 'In Bed Time', 'Out Bed Time', 'Efficiency', 'Latency', 'Onset', 'Total Sleep Time',
-           'WASO', 'Number of Awakenings', 'Length of Awakenings in Minutes']
-datetime_columns = ['In Bed Time', 'Out Bed Time', 'Onset']
+dateparse = lambda x: pd.datetime.strptime(x, '%m/%d/%Y')
+columns = ['Subject', 'Date', 'kcals', 'METs', 'Sedentary', 'Light', 'Moderate', 'Vigorous', 'Very Vigorous',
+    '% in Sedentary', '% in Light', '% in Moderate', '% in Vigorous', '% in Very Vigorous', 'Steps Counts']
+datetime_columns = ['Date']
 first_file = True
 out_df = pd.DataFrame()
 
 # go through each file to extract data from
 os.chdir(input_dir)
-for file_name in glob.iglob("*.csv", recursive=True):
+for file_name in glob.iglob(in_file, recursive=True):
     if verbose:
         print("Processing: " + file_name)
     # export data
@@ -122,10 +123,12 @@ for file_name in glob.iglob("*.csv", recursive=True):
 out_df = out_df.drop_duplicates(keep='first')
 
 # transform the fields that weren't provided
-out_df['Total Time in Bed'] = out_df['Total Sleep Time']
-out_df['Total Sleep Time'] = out_df['Total Time in Bed']-out_df['Length of Awakenings in Minutes']-out_df['Latency']
-out_df['Mid-Sleep Point'] = out_df['Onset'] + (out_df['Out Bed Time']-out_df['Onset'])/2 # TODO review if this is correct!
-out_df['Date'] = out_df['In Bed Time'].dt.date
+##out_df['Total Time in Bed'] = out_df['Total Sleep Time']
+##out_df['Total Sleep Time'] = out_df['Total Time in Bed']-out_df['Length of Awakenings in Minutes']-out_df['Latency']
+##out_df['Mid-Sleep Point'] = out_df['Onset'] + (out_df['Out Bed Time']-out_df['Onset'])/2 # TODO review if this is correct!
+##out_df['Date'] = out_df['In Bed Time'].dt.date
+
+# if you're reading all this, then here's a rewarding gif: https://i.imgur.com/vaoNp2b.gif
 
 # prep for missing dates
 if verbose:
@@ -133,13 +136,6 @@ if verbose:
     out_df.info(verbose = True)
 subject = ""
 missing_rows = []
-expected_date = out_df['Date'][0]
-if verbose:
-    print("First row date: " + str(expected_date))
-expected_date += datetime.timedelta(days=1)
-if verbose:
-    print("Expected date: " + str(expected_date))
-date_diff = 0
 # FIXME
 ### check for missing dates:
 ##for i, row in out_df.iterrows():
